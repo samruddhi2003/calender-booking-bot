@@ -1,0 +1,24 @@
+# 🔐 Secret files
+.env
+service_account.json
+
+# 🧪 Python bytecode
+__pycache__/
+*.py[cod]
+*.pyo
+
+# 📦 Virtual environment
+venv/
+ENV/
+env/
+.venv/
+
+# 🚫 OS files
+.DS_Store
+Thumbs.db
+
+# 🧪 Compiled binaries
+*.so
+
+# 🌐 VSCode settings (optional)
+.vscode/

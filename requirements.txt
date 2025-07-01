@@ -1,0 +1,14 @@
+fastapi
+uvicorn
+python-dotenv
+requests
+langchain
+langchain-community
+langchain-core
+google-api-python-client
+google-auth
+google-auth-httplib2
+google-auth-oauthlib
+fireworks-ai
+streamlit        # If you have a Streamlit frontend
+pydantic         # For request validation (often used with FastAPI)
