@@ -1,6 +1,8 @@
 # 🔐 Secret files
 .env
 service_account.json
+.streamlit/secrets.toml
+
 
 # 🧪 Python bytecode
 __pycache__/
