@@ -1,6 +1,5 @@
 import streamlit as st
 from bot_agent import agent  # This should be your AgentExecutor or initialized agent
-import re
 
 # Page config
 st.set_page_config(page_title="🗓️ Calendar Booking Bot", layout="centered")
@@ -25,22 +24,15 @@ for msg in st.session_state.messages:
 # Handle user input
 user_input = st.chat_input("What would you like to book?")
 if user_input:
-    # Add user message
     st.session_state.messages.append({"role": "user", "content": user_input})
     with st.chat_message("user", avatar="🧑‍💻"):
         st.markdown(user_input)
 
-    # Get agent response
     with st.chat_message("assistant", avatar="🤖"):
         with st.spinner("Thinking..."):
             response = agent.run(user_input)
 
-            # Try to extract event link from response
-            match = re.search(r"\[View event\]\((.*?)\)", response)
-            if match:
-                event_url = match.group(1)
-                response += f"\n\n[🔗 Open Calendar Event]({event_url})"
-
-            # Show and save bot message
+            # Directly render the response (already contains Markdown link)
             st.markdown(response, unsafe_allow_html=True)
+
             st.session_state.messages.append({"role": "assistant", "content": response})
