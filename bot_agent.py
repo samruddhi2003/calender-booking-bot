@@ -35,7 +35,7 @@ def book_event(user_input: str) -> str:
 
         summary, start_time, end_time = match.groups()
 
-        response = requests.post("http://127.0.0.1:8000/book", json={
+        response = requests.post("https://calender-booking-bot.onrender.com/book", json={
             "summary": summary,
             "start_time": start_time,
             "end_time": end_time
