@@ -116,3 +116,6 @@ def nlp_book(request: NaturalLanguageRequest):
     except Exception as e:
         print(f"❌ Fireworks NLP error: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+@app.get("/")
+def root():
+    return {"message": "Calendar Bot is running 🚀"}
