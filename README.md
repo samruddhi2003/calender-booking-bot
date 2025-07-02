@@ -99,7 +99,6 @@ streamlit run chat_ui.py
 Here’s how the chatbot UI looks in action:
 
 ![UI Screenshot](assets/UI1.png)
-![UI Screenshot](assets/UI2.png)
 
 ---
 
