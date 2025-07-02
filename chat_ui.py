@@ -31,6 +31,7 @@ if user_input:
     with st.chat_message("assistant", avatar="🤖"):
         with st.spinner("Thinking..."):
             response = agent.run(user_input)
+            print("🪵 DEBUG - Bot response:", response)  # Add this line
 
             # Directly render the response (already contains Markdown link)
             st.markdown(response, unsafe_allow_html=True)
