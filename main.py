@@ -4,6 +4,7 @@ from google.oauth2 import service_account
 from googleapiclient.discovery import build
 from dotenv import load_dotenv
 import os
+import json
 import requests
 
 # 🔃 Load environment variables
@@ -11,13 +12,16 @@ load_dotenv()
 
 app = FastAPI()
 
-# 🔐 Load credentials
-SERVICE_ACCOUNT_FILE = 'service_account.json'
+# 🔐 Load credentials securely from env variable
+SERVICE_ACCOUNT_INFO = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
+if not SERVICE_ACCOUNT_INFO:
+    raise RuntimeError("Missing GOOGLE_SERVICE_ACCOUNT_JSON environment variable")
+
 CALENDAR_ID = os.getenv("GOOGLE_CALENDAR_ID")
 FIREWORKS_API_KEY = os.getenv("FIREWORKS_API_KEY")
 
-credentials = service_account.Credentials.from_service_account_file(
-    SERVICE_ACCOUNT_FILE,
+credentials = service_account.Credentials.from_service_account_info(
+    json.loads(SERVICE_ACCOUNT_INFO),
     scopes=['https://www.googleapis.com/auth/calendar']
 )
 
@@ -33,7 +37,7 @@ class EventRequest(BaseModel):
 class NaturalLanguageRequest(BaseModel):
     message: str
 
-# 📅 Existing route to book event
+# 📅 Route to book calendar event
 @app.post("/book")
 def book_event(event: EventRequest):
     try:
@@ -64,7 +68,7 @@ def book_event(event: EventRequest):
         raise HTTPException(status_code=500, detail=str(e))
 
 
-# 💬 NEW: NLP route using Fireworks LLM
+# 💬 Route to parse user message and book via Fireworks LLM
 @app.post("/nlp-book")
 def nlp_book(request: NaturalLanguageRequest):
     try:
@@ -88,20 +92,23 @@ def nlp_book(request: NaturalLanguageRequest):
         """
 
         payload = {
-            "model": "accounts/fireworks/models/llama-v2-7b-chat",  # or change to gpt-style model
+            "model": "accounts/fireworks/models/llama-v2-7b-chat",
             "messages": [
                 {"role": "user", "content": prompt}
             ],
             "temperature": 0.2
         }
 
-        response = requests.post("https://api.fireworks.ai/inference/v1/chat/completions", json=payload, headers=headers)
+        response = requests.post(
+            "https://api.fireworks.ai/inference/v1/chat/completions",
+            json=payload,
+            headers=headers
+        )
         response.raise_for_status()
 
         completion = response.json()["choices"][0]["message"]["content"]
         print("🧠 Fireworks response:", completion)
 
-        import json
         event_data = json.loads(completion)
 
         return book_event(EventRequest(**event_data))
