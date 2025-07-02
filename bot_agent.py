@@ -25,54 +25,33 @@ llm = ChatFireworks(
 @tool
 def book_event(user_input: str) -> str:
     """
-    Book a calendar event using casual language like:
-    'Schedule lunch with John tomorrow from 1pm to 2pm'
+    Book a calendar event using input like:
+    'Book Team Meeting from 2025-07-04T10:00:00 to 2025-07-04T11:00:00'
     """
     try:
-        # 🔥 Call Fireworks to parse the input
-        prompt = f"""
-        You are a helpful assistant that extracts calendar booking information from user input.
-        Input: "{user_input}"
-        Output JSON:
-        {{
-            "summary": "Meeting with HR",
-            "start_time": "2025-10-19T03:00:00",
-            "end_time": "2025-10-19T04:00:00"
-        }}
-        """
+        match = re.search(r"book (.+?) from ([\d\-T:]+) to ([\d\-T:]+)", user_input, re.IGNORECASE)
+        if not match:
+            return "❌ Invalid format. Use: 'Book [title] from [start_time] to [end_time]'"
 
-        headers = {
-            "Authorization": f"Bearer {os.getenv('FIREWORKS_API_KEY')}",
-            "Content-Type": "application/json"
-        }
+        summary, start_time, end_time = match.groups()
 
-        payload = {
-            "model": "accounts/fireworks/models/llama4-maverick-instruct-basic",
-            "messages": [{"role": "user", "content": prompt}],
-            "temperature": 0.3
-        }
+        response = requests.post("https://calender-booking-bot.onrender.com/book", json={
+            "summary": summary,
+            "start_time": start_time,
+            "end_time": end_time
+        })
 
-        response = requests.post("https://api.fireworks.ai/inference/v1/chat/completions", json=payload, headers=headers)
-        response.raise_for_status()
-        content = response.json()["choices"][0]["message"]["content"]
+        if response.status_code == 200:
+            user_friendly_start = datetime.fromisoformat(start_time).strftime("%B %d, %Y at %I:%M %p")
+            user_friendly_end = datetime.fromisoformat(end_time).strftime("%I:%M %p")
+            event_link = response.json().get("event_link")
 
-        import json
-        event_data = json.loads(content)
-
-        # 📅 Call backend to book the event
-        res = requests.post("https://calender-booking-bot.onrender.com/book", json=event_data)
-
-        if res.status_code == 200:
-            start = datetime.fromisoformat(event_data["start_time"]).strftime("%B %d, %Y at %I:%M %p")
-            end = datetime.fromisoformat(event_data["end_time"]).strftime("%I:%M %p")
-            link = res.json().get("event_link")
-            return f"✅ '{event_data['summary']}' booked from {start} to {end}. [View event]({link})"
+            return f"✅ Event '{summary}' booked on {user_friendly_start} to {user_friendly_end}. [View event]({event_link})\n\n✅ Booking complete. No further action needed."
         else:
-            return f"❌ Error {res.status_code}: {res.text}"
+            return f"❌ Error {response.status_code}: {response.text}"
 
     except Exception as e:
         return f"❌ Exception: {e}"
-
 
 # Tool list
 tools = [book_event]
