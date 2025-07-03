@@ -2,7 +2,6 @@ from langchain_community.chat_models import ChatFireworks
 from langchain_core.callbacks.manager import CallbackManager
 from langchain.agents import initialize_agent, Tool
 from langchain.tools import tool
-from langchain.agents import AgentExecutor
 from dotenv import load_dotenv
 import os
 import requests
@@ -12,7 +11,7 @@ from datetime import datetime
 # Load environment variables
 load_dotenv()
 
-# Init Fireworks LLM
+# Initialize Fireworks LLM
 llm = ChatFireworks(
     model="accounts/fireworks/models/llama4-maverick-instruct-basic",
     api_key=os.getenv("FIREWORKS_API_KEY"),
@@ -21,11 +20,11 @@ llm = ChatFireworks(
     callback_manager=CallbackManager([]),
 )
 
-# 📅 Tool: Book an event
+# Tool: Book event
 @tool
 def book_event(user_input: str) -> str:
     """
-    Book a calendar event using input like:
+    Book a calendar event. Input format:
     'Book Team Meeting from 2025-07-04T10:00:00 to 2025-07-04T11:00:00'
     """
     try:
@@ -46,37 +45,39 @@ def book_event(user_input: str) -> str:
             user_friendly_end = datetime.fromisoformat(end_time).strftime("%I:%M %p")
             event_link = response.json().get("event_link")
 
-            return f"✅ Event '{summary}' booked on {user_friendly_start} to {user_friendly_end}. [View event]({event_link})\n\n✅ Booking complete. No further action needed."
+            return f"✅ Event '{summary}' booked on {user_friendly_start} to {user_friendly_end}. [View event]({event_link})"
         else:
             return f"❌ Error {response.status_code}: {response.text}"
 
     except Exception as e:
         return f"❌ Exception: {e}"
 
-# 🕒 Tool: Get available slots
+# Tool: Get available slots (SINGLE input version for compatibility)
 @tool
-def get_available_slots_fn(user_input: str) -> str:
+def get_available_slots(user_input: str) -> str:
     """
-    Returns available 1-hour time slots for today.
+    Ask: 'What time am I free today?' or 'Show my available slots'
     """
-    try:
-        response = requests.get("https://calender-booking-bot.onrender.com/slots")
-        if response.status_code == 200:
-            slots = response.json().get("available_slots", [])
-            if not slots:
-                return "❌ No available slots found today."
-            return "✅ Available slots today:\n" + "\n".join(f"- {slot}" for slot in slots)
-        else:
-            return f"❌ Failed to fetch slots. Status: {response.status_code}"
-    except Exception as e:
-        return f"❌ Exception while getting slots: {e}"
+    if "available" not in user_input.lower() and "free" not in user_input.lower():
+        return "❌ Please ask about availability."
 
-# Register both tools
-tools = [
-    book_event,
-    Tool(name="get_available_slots_tool", func=get_available_slots_fn, description="Check available 1-hour slots today.")
-]
-# Init agent
+    try:
+        response = requests.get("https://calender-booking-bot.onrender.com/available")
+        if response.status_code == 200:
+            data = response.json()
+            slots = data.get("available_slots", [])
+            if not slots:
+                return "❌ You have no free slots today."
+            return "✅ Available slots:\n" + "\n".join(f"• {slot}" for slot in slots)
+        else:
+            return "❌ Failed to retrieve available slots due to server error."
+    except Exception as e:
+        return f"❌ Error fetching slots: {e}"
+
+# Tools list
+tools = [book_event, get_available_slots]
+
+# Initialize agent
 agent = initialize_agent(
     tools=tools,
     llm=llm,
@@ -84,5 +85,3 @@ agent = initialize_agent(
     verbose=True,
     handle_parsing_errors=True
 )
-
-executor = AgentExecutor(agent=agent, tools=tools, max_iterations=3)
