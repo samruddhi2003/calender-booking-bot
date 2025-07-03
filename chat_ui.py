@@ -30,6 +30,6 @@ if user_input:
 
     with st.chat_message("assistant", avatar="🤖"):
         with st.spinner("Thinking..."):
-            response = agent.run(user_input)
+            response = agent.invoke(user_input)
             st.markdown(response, unsafe_allow_html=True)
             st.session_state.messages.append({"role": "assistant", "content": response})
