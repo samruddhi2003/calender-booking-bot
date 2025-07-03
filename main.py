@@ -54,38 +54,37 @@ def book_event(event: EventRequest):
 @app.get("/available")
 def get_available_slots():
     try:
-        now = datetime.datetime.now().isoformat()
-        end_of_day = (datetime.datetime.now().replace(hour=23, minute=59, second=59)).isoformat()
+        print("📅 Checking available slots...")
 
+        now = datetime.utcnow().isoformat() + 'Z'  # 'Z' means UTC
         events_result = service.events().list(
             calendarId=CALENDAR_ID,
             timeMin=now,
-            timeMax=end_of_day,
+            maxResults=10,
             singleEvents=True,
-            orderBy="startTime"
+            orderBy='startTime'
         ).execute()
 
-        events = events_result.get("items", [])
-        busy_slots = [(e["start"]["dateTime"], e["end"]["dateTime"]) for e in events if "dateTime" in e["start"]]
+        events = events_result.get('items', [])
 
-        all_slots = []
-        start_hour = datetime.datetime.now().replace(minute=0, second=0, microsecond=0)
-        for i in range(10):  # Next 10 hours
-            start_slot = start_hour + datetime.timedelta(hours=i)
-            end_slot = start_slot + datetime.timedelta(hours=1)
-            slot_str = (start_slot.isoformat(), end_slot.isoformat())
+        available_slots = []
+        for event in events:
+            start = event['start'].get('dateTime', event['start'].get('date'))
+            end = event['end'].get('dateTime', event['end'].get('date'))
+            available_slots.append(f"{start} to {end}")
 
-            if not any(
-                bs[0] < slot_str[1] and bs[1] > slot_str[0]
-                for bs in busy_slots
-            ):
-                all_slots.append(f"{start_slot.strftime('%I:%M %p')} to {end_slot.strftime('%I:%M %p')}")
+        if not available_slots:
+            return {"message": "✅ You're free today! 🎉"}
 
-        return {"available_slots": all_slots}
+        return {"message": "📅 Your upcoming events today:\n" + "\n".join(available_slots)}
     
     except Exception as e:
-        print(f"❌ /available route failed: {e}")
-        raise HTTPException(status_code=500, detail=str(e))
+        import traceback
+        return {
+            "error": str(e),
+            "trace": traceback.format_exc()
+        }
+
 
 
 @app.get("/")
