@@ -55,7 +55,7 @@ def book_event(user_input: str) -> str:
 
 # 🕒 Tool: Get available slots
 @tool
-def get_available_slots_tool(_: str) -> str:
+def get_available_slots_fn(user_input: str) -> str:
     """
     Returns available 1-hour time slots for today.
     """
@@ -71,9 +71,11 @@ def get_available_slots_tool(_: str) -> str:
     except Exception as e:
         return f"❌ Exception while getting slots: {e}"
 
-# Combine tools
-tools = [book_event, get_available_slots_tool]
-
+# Register both tools
+tools = [
+    book_event,
+    Tool(name="get_available_slots_tool", func=get_available_slots_fn, description="Check available 1-hour slots today.")
+]
 # Init agent
 agent = initialize_agent(
     tools=tools,
