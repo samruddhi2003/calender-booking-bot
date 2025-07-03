@@ -31,5 +31,12 @@ if user_input:
     with st.chat_message("assistant", avatar="🤖"):
         with st.spinner("Thinking..."):
             response = agent.invoke(user_input)
-            st.markdown(response, unsafe_allow_html=True)
-            st.session_state.messages.append({"role": "assistant", "content": response})
+
+# If response is a dict, get only the output
+if isinstance(response, dict):
+    final_response = response.get("output", str(response))
+else:
+    final_response = str(response)
+
+st.markdown(final_response, unsafe_allow_html=True)
+st.session_state.messages.append({"role": "assistant", "content": final_response})
