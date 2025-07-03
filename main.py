@@ -56,7 +56,7 @@ def get_available_slots():
     try:
         print("📅 Checking available slots...")
 
-        now = datetime.utcnow().isoformat() + 'Z'  # 'Z' means UTC
+        now = datetime.datetime.utcnow().isoformat() + 'Z'
         events_result = service.events().list(
             calendarId=CALENDAR_ID,
             timeMin=now,
