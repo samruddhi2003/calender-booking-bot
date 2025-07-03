@@ -82,8 +82,11 @@ def get_available_slots():
                 all_slots.append(f"{start_slot.strftime('%I:%M %p')} to {end_slot.strftime('%I:%M %p')}")
 
         return {"available_slots": all_slots}
+    
     except Exception as e:
+        print(f"❌ /available route failed: {e}")
         raise HTTPException(status_code=500, detail=str(e))
+
 
 @app.get("/")
 def root():
