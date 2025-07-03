@@ -12,7 +12,7 @@ load_dotenv()
 
 app = FastAPI()
 
-# Google credentials
+# Load credentials
 SERVICE_ACCOUNT_INFO = os.getenv("GOOGLE_SERVICE_ACCOUNT_JSON")
 if not SERVICE_ACCOUNT_INFO:
     raise RuntimeError("Missing GOOGLE_SERVICE_ACCOUNT_JSON")
@@ -24,14 +24,14 @@ credentials = service_account.Credentials.from_service_account_info(
     scopes=["https://www.googleapis.com/auth/calendar"]
 )
 
-# Google Calendar service
+# Calendar service
 service = build("calendar", "v3", credentials=credentials)
 
-# Request model
+# Request models
 class EventRequest(BaseModel):
     summary: str
-    start_time: str  # ISO format
-    end_time: str    # ISO format
+    start_time: str
+    end_time: str
 
 @app.post("/book")
 def book_event(event: EventRequest):
@@ -42,7 +42,6 @@ def book_event(event: EventRequest):
             "end": {"dateTime": event.end_time, "timeZone": "Asia/Kolkata"},
         }
         created_event = service.events().insert(calendarId=CALENDAR_ID, body=event_body).execute()
-
         return {
             "status": "success",
             "event_link": created_event.get("htmlLink"),
@@ -54,9 +53,7 @@ def book_event(event: EventRequest):
 @app.get("/available")
 def get_available_slots():
     try:
-        print("📅 Checking available slots...")
-
-        now = datetime.datetime.utcnow().isoformat() + 'Z'
+        now = datetime.datetime.now(datetime.timezone.utc).isoformat()
         events_result = service.events().list(
             calendarId=CALENDAR_ID,
             timeMin=now,
@@ -66,26 +63,20 @@ def get_available_slots():
         ).execute()
 
         events = events_result.get('items', [])
+        if not events:
+            return {"available_slots": [], "message": "✅ You're free today!"}
 
-        available_slots = []
+        booked = []
         for event in events:
-            start = event['start'].get('dateTime', event['start'].get('date'))
-            end = event['end'].get('dateTime', event['end'].get('date'))
-            available_slots.append(f"{start} to {end}")
+            start = event["start"].get("dateTime", event["start"].get("date"))
+            end = event["end"].get("dateTime", event["end"].get("date"))
+            booked.append(f"{start} to {end}")
 
-        if not available_slots:
-            return {"message": "✅ You're free today! 🎉"}
+        return {"available_slots": booked}
 
-        return {"message": "📅 Your upcoming events today:\n" + "\n".join(available_slots)}
-    
     except Exception as e:
         import traceback
-        return {
-            "error": str(e),
-            "trace": traceback.format_exc()
-        }
-
-
+        return {"error": str(e), "trace": traceback.format_exc()}
 
 @app.get("/")
 def root():
