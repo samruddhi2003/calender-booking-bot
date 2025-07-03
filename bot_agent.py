@@ -12,7 +12,7 @@ from datetime import datetime
 # Load environment variables
 load_dotenv()
 
-# Initialize Fireworks LLM
+# Init Fireworks LLM
 llm = ChatFireworks(
     model="accounts/fireworks/models/llama4-maverick-instruct-basic",
     api_key=os.getenv("FIREWORKS_API_KEY"),
@@ -21,7 +21,7 @@ llm = ChatFireworks(
     callback_manager=CallbackManager([]),
 )
 
-# Tool: Book event in calendar
+# 📅 Tool: Book an event
 @tool
 def book_event(user_input: str) -> str:
     """
@@ -53,10 +53,28 @@ def book_event(user_input: str) -> str:
     except Exception as e:
         return f"❌ Exception: {e}"
 
-# Tool list
-tools = [book_event]
+# 🕒 Tool: Get available slots
+@tool
+def get_available_slots_tool(_: str) -> str:
+    """
+    Returns available 1-hour time slots for today.
+    """
+    try:
+        response = requests.get("https://calender-booking-bot.onrender.com/slots")
+        if response.status_code == 200:
+            slots = response.json().get("available_slots", [])
+            if not slots:
+                return "❌ No available slots found today."
+            return "✅ Available slots today:\n" + "\n".join(f"- {slot}" for slot in slots)
+        else:
+            return f"❌ Failed to fetch slots. Status: {response.status_code}"
+    except Exception as e:
+        return f"❌ Exception while getting slots: {e}"
 
-# Initialize agent
+# Combine tools
+tools = [book_event, get_available_slots_tool]
+
+# Init agent
 agent = initialize_agent(
     tools=tools,
     llm=llm,
@@ -65,14 +83,4 @@ agent = initialize_agent(
     handle_parsing_errors=True
 )
 
-# Wrap agent to limit unnecessary retries
 executor = AgentExecutor(agent=agent, tools=tools, max_iterations=3)
-
-# CLI loop
-if __name__ == "__main__":
-    while True:
-        user_input = input("🗣️ You: ")
-        if user_input.lower() in ["exit", "quit"]:
-            break
-        result = executor.run(user_input)
-        print("🤖 Bot:", result)
