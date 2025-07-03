@@ -61,14 +61,13 @@ def get_available_slots(user_input: str) -> str:
 
     try:
         response = requests.get("https://calender-booking-bot.onrender.com/available")
-        if response.status_code != 200:
-            return "❌ Could not fetch your slots due to server error."
+       if response.status_code == 200:
+    data = response.json()
+    slots = data.get("available_slots", [])
+    if not slots:
+        return "✅ You're completely free today! 🕊️"
+    return "📅 Your schedule today:\n" + "\n".join(f"• {slot}" for slot in slots)
 
-        data = response.json()
-        slots = data.get("available_slots", [])
-        if not slots:
-            return "✅ You're totally free today! 🎉"
-            return "📅 Your schedule today:\n```" + "\n".join(f"• {s}" for s in slots) + "```"
 
     except Exception as e:
         return f"❌ Failed to retrieve availability: {e}"
